@@ -1,0 +1,24 @@
+{
+  "domains": [
+    {
+      "name": "project.my.id",
+      "path": "/data/data/com.termux/files/home/web/project.my.id",
+      "status": "Running",
+      "server": "nginx"
+    },
+    {
+      "name": "staging.com",
+      "path": "/data/data/com.termux/files/home/web/staging.com",
+      "status": "Offline",
+      "server": "node.js"
+    }
+  ],
+  "databases": [
+    {
+      "name": "project_main_db",
+      "user": "webuser",
+      "size": "12MB",
+      "type": "MariaDB"
+    }
+  ]
+}

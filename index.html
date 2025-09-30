@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PaongDev Termux Dashboard | SC File 10</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .sidebar { transition: transform 0.3s ease-in-out; z-index: 50; }
+        .cli-output { background-color: #1f2937; color: #d1d5db; font-family: 'Consolas', 'Monospace'; min-height: 250px; overflow-y: auto; white-space: pre-wrap; }
+        .active-link { background-color: #4f46e5; color: white !important; }
+        /* Mobile View (Default) */
+        .sidebar { transform: translateX(-100%); position: fixed; height: 100%; top: 0; left: 0; }
+        .sidebar-open { transform: translateX(0); }
+        .content-area { margin-left: 0; }
+        /* Desktop View (md:) */
+        @media (min-width: 768px) {
+            .sidebar { transform: translateX(0); width: 256px; }
+            .content-area { margin-left: 256px; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 antialiased">
+
+    <!-- Login Page -->
+    <div id="login-page" class="flex items-center justify-center min-h-screen">
+        <div class="w-full max-w-sm p-6 bg-white rounded-xl shadow-2xl border border-gray-200">
+            <h1 class="text-3xl font-extrabold text-gray-800 mb-2 text-center">PaongVPS Login</h1>
+            <p class="text-center text-sm text-gray-500 mb-6">Akses Server Termux</p>
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label for="user" class="block text-sm font-medium text-gray-700">Username</label>
+                    <input type="text" id="user" name="username" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label for="pass" class="block text-sm font-medium text-gray-700">Sandi</label>
+                    <input type="password" id="pass" name="password" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div id="login-message" class="text-sm text-red-500 mt-2 hidden"></div>
+                <button type="submit" class="w-full flex justify-center py-2 px-4 rounded-lg shadow-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none transition duration-150">
+                    Masuk ke Dashboard
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Main Dashboard Container -->
+    <div id="dashboard-container" class="flex min-h-screen" style="display: none;">
+        
+        <!-- Sidebar / Hamburger Menu -->
+        <div id="sidebar" class="sidebar bg-gray-800 text-white w-64 p-4">
+            <div class="flex items-center justify-between mb-8">
+                <h2 class="text-2xl font-bold text-indigo-400">PaongVPS Dev</h2>
+                <button id="close-menu-btn" class="text-white md:hidden p-2 rounded-lg hover:bg-gray-700">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <nav class="space-y-2">
+                <a href="#" data-section="overview" class="nav-link block py-2 px-3 rounded-lg text-sm font-medium hover:bg-gray-700 active-link">Dashboard</a>
+                <a href="#" data-section="cli" class="nav-link block py-2 px-3 rounded-lg text-sm font-medium hover:bg-gray-700">CLI Terminal</a>
+                <a href="#" data-section="deployment" class="nav-link block py-2 px-3 rounded-lg text-sm font-medium hover:bg-gray-700">Deployment & Hosting</a>
+                <a href="#" data-section="db" class="nav-link block py-2 px-3 rounded-lg text-sm font-medium hover:bg-gray-700">Database & Akun</a>
+                <a href="#" data-section="firewall" class="nav-link block py-2 px-3 rounded-lg text-sm font-medium hover:bg-gray-700">Firewall & DDoS</a>
+                <a href="#" data-section="node-settings" class="nav-link block py-2 px-3 rounded-lg text-sm font-medium hover:bg-gray-700">Node.js Settings</a>
+            </nav>
+            <div class="mt-10 pt-4 border-t border-gray-700">
+                <button id="logout-btn" class="w-full flex items-center justify-center py-2 px-3 text-sm font-medium text-red-400 bg-gray-700 rounded-lg hover:bg-red-500 hover:text-white transition">
+                    Logout
+                </button>
+            </div>
+        </div>
+
+        <!-- Content Area -->
+        <main id="content-area" class="content-area flex-1 p-4 md:p-8">
+            <!-- Mobile Header -->
+            <header class="flex justify-between items-center mb-6 md:hidden">
+                <button id="open-menu-btn" class="p-2 rounded-lg hover:bg-gray-200">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+                </button>
+                <h1 class="text-xl font-bold text-gray-800">PaongDev VPS</h1>
+            </header>
+
+            <!-- 1. Overview Section -->
+            <section id="overview" class="content-section space-y-6">
+                <h2 class="text-3xl font-extrabold text-gray-800 mb-4">Ringkasan Sistem</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-indigo-500">
+                        <p class="text-sm text-gray-500">Alamat IP Server</p>
+                        <p id="server-ip-display" class="text-xl font-bold text-indigo-600 font-mono">Loading...</p>
+                        <p class="text-xs text-gray-400 mt-1">Status Firewall: <span id="firewall-status" class="font-semibold text-red-500">Loading...</span></p>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-red-500">
+                        <p class="text-sm text-gray-500">Load CPU (Rata-rata)</p>
+                        <p id="cpu-load-avg" class="text-xl font-bold text-red-600">0%</p>
+                        <p class="text-xs text-gray-400 mt-1">Suhu (Simulasi): <span id="temp-sim">38°C</span></p>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-blue-500">
+                        <p class="text-sm text-gray-500">RAM Tersedia</p>
+                        <p id="ram-free-display" class="text-xl font-bold text-blue-600">0 MB</p>
+                        <p class="text-xs text-gray-400 mt-1">Total: <span id="ram-total-display">Loading...</span></p>
+                    </div>
+                </div>
+                
+                <!-- System Graphics -->
+                <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">Grafik Penggunaan Real-time</h3>
+                    <canvas id="cpuChart" class="w-full h-48"></canvas>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">Aksi Server Cepat</h3>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <button onclick="sendVpsCommand('nginx', 'start')" class="bg-green-500 text-white py-2 px-4 rounded-lg shadow hover:bg-green-600 transition">Nginx Start</button>
+                        <button onclick="sendVpsCommand('nginx', 'stop')" class="bg-red-500 text-white py-2 px-4 rounded-lg shadow hover:bg-red-600 transition">Nginx Stop</button>
+                        <button onclick="sendVpsCommand('mysqld', 'start')" class="bg-blue-500 text-white py-2 px-4 rounded-lg shadow hover:bg-blue-600 transition">DB Start</button>
+                        <button onclick="sendVpsCommand('mysqld', 'stop')" class="bg-yellow-500 text-white py-2 px-4 rounded-lg shadow hover:bg-yellow-600 transition">DB Stop</button>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 2. CLI Terminal Section -->
+            <section id="cli" class="content-section" style="display: none;">
+                <h2 class="text-3xl font-extrabold text-gray-800 mb-4">Command Line Interface</h2>
+                <div class="bg-gray-900 rounded-xl shadow-2xl p-4">
+                    <p class="text-green-400 mb-2 font-mono text-sm">Welcome to Termux Shell (Executing Real Commands)</p>
+                    <div id="cli-output" class="cli-output p-2 rounded-lg">
+                        $ Termux-VPS-Dashboard 1.0.0 (PaongDev)
+                        $ Silakan masukkan perintah Termux (contoh: ls, cd, pkg install, whoami)
+                    </div>
+                    <div class="flex mt-4">
+                        <span class="text-green-400 font-mono self-center mr-2">$</span>
+                        <input type="text" id="cli-input" placeholder="Ketik perintah..." class="flex-1 bg-gray-900 text-gray-100 border-none focus:ring-0 focus:outline-none font-mono" onkeydown="handleCliInput(event)">
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 3. Deployment Section -->
+            <section id="deployment" class="content-section" style="display: none;">
+                <h2 class="text-3xl font-extrabold text-gray-800 mb-4">Deployment Hosting</h2>
+                
+                <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">Upload & Proses Berkas</h3>
+                    <form id="upload-form" class="space-y-4">
+                        <input type="file" id="upload-file" accept=".zip,.html,.php,.js" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                        
+                        <label for="target-domain" class="block text-sm font-medium text-gray-700">Pilih Domain Target</label>
+                        <select id="target-domain" class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                            <!-- Options filled by JS -->
+                        </select>
+                        
+                        <button type="submit" class="w-full flex justify-center py-2 px-4 rounded-lg shadow-md text-sm font-medium text-white bg-green-600 hover:bg-green-700 transition duration-150">
+                            Unggah & Deploy
+                        </button>
+                        <p id="upload-status" class="text-sm mt-3 text-center"></p>
+                    </form>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">Daftar Hosting Aktif</h3>
+                    <div id="domain-list" class="space-y-3">
+                        <!-- Domain List filled by JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. Database & Akun Section -->
+            <section id="db" class="content-section" style="display: none;">
+                <h2 class="text-3xl font-extrabold text-gray-800 mb-4">Database & Akun</h2>
+                
+                <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">Manajemen Database (MariaDB/MySQL)</h3>
+                    <div id="db-list" class="space-y-3">
+                        <!-- DB List filled by JS -->
+                    </div>
+                    <button onclick="simulateModal('Buat DB Baru')" class="mt-4 bg-indigo-500 text-white py-2 px-4 rounded-lg shadow hover:bg-indigo-600 transition">
+                        + Buat Database Baru
+                    </button>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">Akun Sistem Termux</h3>
+                    <p class="text-gray-600">Akun ini mengacu pada pengguna Termux yang sedang aktif (Uid: <span id="user-uid-display">Loading...</span>).</p>
+                    <button onclick="simulateModal('Kelola Akun')" class="mt-4 bg-gray-500 text-white py-2 px-4 rounded-lg shadow hover:bg-gray-600 transition">
+                        Kelola Kunci SSH & User
+                    </button>
+                </div>
+            </section>
+
+            <!-- 5. Firewall & DDoS Section (NEW) -->
+            <section id="firewall" class="content-section" style="display: none;">
+                <h2 class="text-3xl font-extrabold text-gray-800 mb-4">Firewall & DDoS Protection</h2>
+
+                <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">Status & Kebijakan Firewall</h3>
+                    <div id="firewall-config-display" class="space-y-2">
+                        <!-- Filled by JS -->
+                    </div>
+                    <button onclick="saveFirewallConfig()" class="mt-4 bg-red-600 text-white py-2 px-4 rounded-lg shadow hover:bg-red-700 transition">Terapkan Aturan</button>
+                </div>
+                
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">DDoS Protection (Rate Limiting)</h3>
+                    <form id="ddos-form" class="space-y-3">
+                        <div>
+                            <label for="rate-limit" class="block text-sm font-medium text-gray-700">Requests Maks per IP/Menit</label>
+                            <input type="number" id="rate-limit" class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg">
+                        </div>
+                        <div>
+                            <label for="block-duration" class="block text-sm font-medium text-gray-700">Durasi Blokir (Menit)</label>
+                            <input type="number" id="block-duration" class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg">
+                        </div>
+                        <button type="submit" class="bg-indigo-600 text-white py-2 px-4 rounded-lg shadow hover:bg-indigo-700 transition">Simpan DDoS Settings</button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- 6. Node.js Settings Section (NEW) -->
+            <section id="node-settings" class="content-section" style="display: none;">
+                <h2 class="text-3xl font-extrabold text-gray-800 mb-4">Node.js Server Settings</h2>
+
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">Konfigurasi Server `server.js`</h3>
+                    <form id="node-settings-form" class="space-y-4">
+                        <div>
+                            <label for="server-port" class="block text-sm font-medium text-gray-700">Server Port</label>
+                            <input type="number" id="server-port" class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg">
+                            <p class="text-xs text-red-500 mt-1">⚠️ Perubahan Port memerlukan restart `server.js` secara manual!</p>
+                        </div>
+                        <div>
+                            <label for="max-filesize" class="block text-sm font-medium text-gray-700">Maks Ukuran File Upload (MB)</label>
+                            <input type="number" id="max-filesize" class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg">
+                        </div>
+                        <div>
+                            <label for="cli-timeout" class="block text-sm font-medium text-gray-700">CLI Timeout (Detik)</label>
+                            <input type="number" id="cli-timeout" class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg">
+                        </div>
+                        <button type="submit" class="bg-green-600 text-white py-2 px-4 rounded-lg shadow hover:bg-green-700 transition">Simpan Konfigurasi Node.js</button>
+                    </form>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modal for Messages -->
+    <div id="modal-container" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-50">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
+            <h3 id="modal-title" class="text-xl font-bold mb-3 text-gray-800"></h3>
+            <p id="modal-body" class="text-gray-600 mb-4 whitespace-pre-wrap"></p>
+            <button onclick="closeModal()" class="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition">Tutup</button>
+        </div>
+    </div>
+
+    <script>
+        // --- Core Application Logic ---
+        const API_URL = ''; // Relative path
+        let cpuChartInstance;
+        let domainData = [];
+        let dbData = [];
+        let nodeSettings = {};
+        let firewallRules = {};
+
+        document.addEventListener('DOMContentLoaded', init);
+
+        function init() {
+            // Check for token on load
+            const token = localStorage.getItem('jwt_token');
+            if (token) {
+                showDashboard();
+                fetchDataAndInitUI();
+            } else {
+                showLogin();
+            }
+
+            document.getElementById('login-form').addEventListener('submit', handleLogin);
+            document.getElementById('logout-btn').addEventListener('click', handleLogout);
+            document.getElementById('open-menu-btn').addEventListener('click', () => toggleSidebar(true));
+            document.getElementById('close-menu-btn').addEventListener('click', () => toggleSidebar(false));
+            document.getElementById('upload-form').addEventListener('submit', handleUpload);
+            document.getElementById('node-settings-form').addEventListener('submit', handleNodeSettingsSubmit);
+            document.getElementById('ddos-form').addEventListener('submit', handleDdosFormSubmit);
+
+
+            // Navigation
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const sectionId = e.target.getAttribute('data-section');
+                    showSection(sectionId);
+                    // Close sidebar on mobile after click
+                    if (window.innerWidth < 768) {
+                        toggleSidebar(false);
+                    }
+                    // Update active link
+                    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active-link'));
+                    e.target.classList.add('active-link');
+                });
+            });
+        }
+        
+        async function fetchDataAndInitUI() {
+            await fetchSystemInfo();
+            await fetchDashboardData();
+            await fetchNodeSettings();
+            await fetchFirewallRules();
+            initCharts();
+            setInterval(fetchSystemInfo, 5000); // Update system info every 5 seconds
+            
+            // Initial Section
+            showSection('overview');
+        }
+
+        // --- UI & View Control ---
+
+        function showLogin() {
+            document.getElementById('login-page').style.display = 'flex';
+            document.getElementById('dashboard-container').style.display = 'none';
+        }
+
+        function showDashboard() {
+            document.getElementById('login-page').style.display = 'none';
+            document.getElementById('dashboard-container').style.display = 'flex';
+        }
+
+        function showSection(sectionId) {
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.style.display = section.id === sectionId ? 'block' : 'none';
+            });
+            // Specific chart update on overview section view
+            if (sectionId === 'overview' && cpuChartInstance) {
+                 cpuChartInstance.update();
+            }
+        }
+
+        function toggleSidebar(open) {
+            const sidebar = document.getElementById('sidebar');
+            if (open) {
+                sidebar.classList.add('sidebar-open');
+            } else {
+                sidebar.classList.remove('sidebar-open');
+            }
+        }
+
+        function simulateModal(title, body = "Aksi ini memerlukan konfirmasi/input lanjutan.") {
+            showModal(title, body);
+        }
+
+        function showModal(title, body) {
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-body').textContent = body;
+            document.getElementById('modal-container').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('modal-container').style.display = 'none';
+        }
+
+        // --- API Calls Helper ---
+
+        async function apiFetch(endpoint, options = {}) {
+            const token = localStorage.getItem('jwt_token');
+            const headers = {
+                'Authorization': token ? `Bearer ${token}` : '',
+                ...options.headers
+            };
+            
+            // Set Content-Type only if body is JSON stringified
+            if (options.body && typeof options.body === 'string' && !options.headers || (options.headers && !options.headers['Content-Type'])) {
+                headers['Content-Type'] = 'application/json';
+            }
+
+            try {
+                const response = await fetch(API_URL + endpoint, { ...options, headers });
+                
+                if (response.status === 401) {
+                    showModal('Sesi Habis', 'Sesi Anda telah berakhir. Silakan login kembali.');
+                    handleLogout();
+                    return null;
+                }
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(\`HTTP error! status: \${response.status}. Detail: \${errorText}\`);
+                }
+                
+                // Try to parse JSON, if it fails, return text (e.g., upload response)
+                try {
+                    return await response.json();
+                } catch (e) {
+                    return { success: true, message: 'Response received successfully but was not JSON.' };
+                }
+
+            } catch (error) {
+                console.error('API Fetch Error:', error);
+                return { success: false, message: error.message };
+            }
+        }
+
+        // --- Auth & Logout ---
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const user = document.getElementById('user').value;
+            const pass = document.getElementById('pass').value;
+            const messageEl = document.getElementById('login-message');
+            messageEl.classList.add('hidden');
+
+            const result = await apiFetch('/api/auth/login', {
+                method: 'POST',
+                body: JSON.stringify({ username: user, password: pass })
+            });
+
+            if (result && result.success) {
+                localStorage.setItem('jwt_token', result.token);
+                showDashboard();
+                fetchDataAndInitUI();
+            } else {
+                messageEl.textContent = 'Login Gagal. Cek kredensial Anda.';
+                messageEl.classList.remove('hidden');
+            }
+        }
+
+        function handleLogout() {
+            localStorage.removeItem('jwt_token');
+            showLogin();
+        }
+        
+        // --- Dashboard Data Fetch ---
+
+        async function fetchDashboardData() {
+            const data = await apiFetch('/api/data');
+            if (data && data.success) {
+                domainData = data.domains;
+                dbData = data.databases;
+                renderDomainList();
+                renderDbList();
+            }
+        }
+
+        async function fetchSystemInfo() {
+            const info = await apiFetch('/api/system/info');
+            if (info && info.success) {
+                const usedPercent = ((info.ramTotal - info.ramFree) / info.ramTotal) * 100;
+                
+                // Overview
+                document.getElementById('server-ip-display').textContent = info.ip;
+                document.getElementById('cpu-load-avg').textContent = \`\${info.cpuLoad.toFixed(1)}%\`;
+                document.getElementById('ram-free-display').textContent = \`\${(info.ramFree / 1024 / 1024).toFixed(0)} MB\`;
+                document.getElementById('ram-total-display').textContent = \`\${(info.ramTotal / 1024 / 1024 / 1024).toFixed(1)} GB\`;
+                document.getElementById('user-uid-display').textContent = info.uid;
+
+                // Update Firewall Status in Overview
+                const fwStatusEl = document.getElementById('firewall-status');
+                if (firewallRules.firewall && firewallRules.firewall.status === 'active') {
+                    fwStatusEl.textContent = 'Aktif (' + firewallRules.firewall.defaultPolicy + ')';
+                    fwStatusEl.className = 'font-semibold text-green-500';
+                } else {
+                    fwStatusEl.textContent = 'Tidak Aktif';
+                    fwStatusEl.className = 'font-semibold text-red-500';
+                }
+                
+                // Chart update (real data)
+                updateCharts(info.cpuLoad);
+            }
+        }
+
+        // --- CLI and Command Execution ---
+        
+        async function handleCliInput(e) {
+            if (e.key === 'Enter') {
+                const inputEl = document.getElementById('cli-input');
+                const command = inputEl.value.trim();
+                inputEl.value = '';
+                
+                if (!command) return;
+
+                const outputEl = document.getElementById('cli-output');
+                outputEl.innerHTML += \`\n<span class="text-green-400 font-mono">$ \${command}</span>`;
+                outputEl.scrollTop = outputEl.scrollHeight;
+
+                if (command.toLowerCase() === 'clear') {
+                     outputEl.innerHTML = `
+$Termux-VPS-Dashboard 1.0.0 (PaongDev)$ Silakan masukkan perintah Termux (contoh: ls, cd, pkg install, whoami)`;
+                     return;
+                }
+                
+                outputEl.innerHTML += '\nMenunggu eksekusi...';
+                outputEl.scrollTop = outputEl.scrollHeight;
+
+                const result = await apiFetch('/api/system/cli', {
+                    method: 'POST',
+                    body: JSON.stringify({ command: command })
+                });
+                
+                outputEl.innerHTML = outputEl.innerHTML.replace('Menunggu eksekusi...', '');
+                outputEl.innerHTML += \`\n\${result.output}\`;
+                outputEl.scrollTop = outputEl.scrollHeight;
+            }
+        }
+
+        async function sendVpsCommand(service, action) {
+             showModal('Mengirim Perintah', \`Mengirim perintah: \${service} \${action}...\`);
+             const result = await apiFetch('/api/system/service', {
+                method: 'POST',
+                body: JSON.stringify({ service: service, action: action })
+            });
+
+            if (result && result.success) {
+                 showModal(`\${service} \${action} Berhasil`, result.output);
+            } else {
+                 showModal(`\${service} \${action} Gagal`, result.output);
+            }
+        }
+        
+        // --- Deployment Handler ---
+        async function handleUpload(e) {
+            e.preventDefault();
+            const fileInput = document.getElementById('upload-file');
+            const targetSelect = document.getElementById('target-domain');
+            const statusEl = document.getElementById('upload-status');
+            
+            if (fileInput.files.length === 0) {
+                statusEl.className = 'text-sm mt-3 text-red-500';
+                statusEl.textContent = 'Pilih berkas untuk diunggah!';
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const targetDomain = domainData.find(d => d.name === targetSelect.value);
+            
+            if (!targetDomain) {
+                statusEl.className = 'text-sm mt-3 text-red-500';
+                statusEl.textContent = 'Domain target tidak valid.';
+                return;
+            }
+
+            statusEl.className = 'text-sm mt-3 text-yellow-500';
+            statusEl.textContent = `Mengunggah \${file.name} ke \${targetDomain.name}...`;
+
+            const formData = new FormData();
+            formData.append('deploymentFile', file);
+            formData.append('targetPath', targetDomain.path);
+            
+            // NOTE: Use specific headers to allow browser handle FormData
+            const result = await apiFetch('/api/deployment/upload', {
+                method: 'POST',
+                body: formData,
+                headers: {} 
+            });
+
+            if (result && result.success) {
+                statusEl.className = 'text-sm mt-3 text-green-500';
+                statusEl.textContent = `Deployment berhasil! \${file.name} diproses.`;
+                showModal('Deployment Sukses', result.output);
+            } else {
+                 statusEl.className = 'text-sm mt-3 text-red-500';
+                 statusEl.textContent = `Deployment GAGAL: \${result.message || 'Kesalahan Server'}`;
+                 showModal('Deployment Gagal', result.output);
+            }
+        }
+        
+        // --- Node.js Settings Management ---
+        async function fetchNodeSettings() {
+            const data = await apiFetch('/api/config/node');
+            if (data && data.success) {
+                nodeSettings = data.settings;
+                document.getElementById('server-port').value = nodeSettings.server.port;
+                document.getElementById('max-filesize').value = nodeSettings.server.maxFileSizeMB;
+                document.getElementById('cli-timeout').value = nodeSettings.api.cliTimeoutSeconds;
+            }
+        }
+
+        async function handleNodeSettingsSubmit(e) {
+            e.preventDefault();
+            const newSettings = {
+                ...nodeSettings,
+                server: {
+                    ...nodeSettings.server,
+                    port: parseInt(document.getElementById('server-port').value),
+                    maxFileSizeMB: parseInt(document.getElementById('max-filesize').value),
+                },
+                api: {
+                    ...nodeSettings.api,
+                    cliTimeoutSeconds: parseInt(document.getElementById('cli-timeout').value),
+                }
+            };
+
+            const result = await apiFetch('/api/config/node', {
+                method: 'POST',
+                body: JSON.stringify(newSettings)
+            });
+
+            if (result && result.success) {
+                showModal('Konfigurasi Tersimpan', 'Pengaturan Node.js berhasil disimpan. **PORT memerlukan restart server manual!**');
+                nodeSettings = newSettings;
+            } else {
+                showModal('Gagal Menyimpan', result.message);
+            }
+        }
+        
+        // --- Firewall & DDoS Management ---
+
+        async function fetchFirewallRules() {
+            const data = await apiFetch('/api/config/firewall');
+            if (data && data.success) {
+                firewallRules = data.rules;
+                renderFirewallConfig();
+                
+                // Update DDoS form
+                document.getElementById('rate-limit').value = firewallRules.ddosProtection.rateLimitPerIP;
+                document.getElementById('block-duration').value = firewallRules.ddosProtection.blockDurationMinutes;
+
+                // Update Overview status immediately
+                fetchSystemInfo(); 
+            }
+        }
+
+        function renderFirewallConfig() {
+            const container = document.getElementById('firewall-config-display');
+            if (!firewallRules.firewall) return;
+
+            const status = firewallRules.firewall.status === 'active' 
+                ? '<span class="text-green-600 font-bold">AKTIF</span>' 
+                : '<span class="text-red-600 font-bold">NONAKTIF</span>';
+
+            let portsHtml = firewallRules.firewall.allowedPorts.map(p => 
+                `<p class="text-sm text-gray-700 font-mono ml-4">- Port ${p.port}/${p.protocol} (${p.description})</p>`
+            ).join('');
+
+            container.innerHTML = `
+                <p>Status: ${status}</p>
+                <p>Default Policy: <span class="font-mono text-indigo-600">${firewallRules.firewall.defaultPolicy}</span></p>
+                <h4 class="font-semibold mt-3">Port Terbuka:</h4>
+                ${portsHtml}
+                <label class="inline-flex items-center mt-3">
+                    <input type="checkbox" id="toggle-firewall" class="h-5 w-5 text-red-600 rounded" ${firewallRules.firewall.status === 'active' ? 'checked' : ''}>
+                    <span class="ml-2 text-sm text-gray-700">Aktifkan Firewall/Iptables (Membutuhkan akses root atau skrip Termux)</span>
+                </label>
+            `;
+        }
+
+        async function saveFirewallConfig() {
+            const isActive = document.getElementById('toggle-firewall').checked;
+            
+            const newRules = {
+                ...firewallRules,
+                firewall: {
+                    ...firewallRules.firewall,
+                    status: isActive ? 'active' : 'inactive'
+                }
+            };
+
+            const result = await apiFetch('/api/config/firewall', {
+                method: 'POST',
+                body: JSON.stringify(newRules)
+            });
+
+            if (result && result.success) {
+                showModal('Aturan Firewall Tersimpan', 'Aturan Firewall berhasil disimpan dan diperbarui. Perintah Iptables (atau simulasi Termux) telah dikirim.');
+                firewallRules = newRules;
+                renderFirewallConfig();
+                fetchSystemInfo(); // Update overview status
+            } else {
+                showModal('Gagal Menyimpan Aturan', result.message);
+            }
+        }
+        
+        async function handleDdosFormSubmit(e) {
+            e.preventDefault();
+            const rateLimit = parseInt(document.getElementById('rate-limit').value);
+            const blockDuration = parseInt(document.getElementById('block-duration').value);
+
+            const newRules = {
+                ...firewallRules,
+                ddosProtection: {
+                    ...firewallRules.ddosProtection,
+                    rateLimitPerIP: rateLimit,
+                    blockDurationMinutes: blockDuration
+                }
+            };
+            
+            const result = await apiFetch('/api/config/firewall', {
+                method: 'POST',
+                body: JSON.stringify(newRules)
+            });
+
+            if (result && result.success) {
+                showModal('DDoS Protection Tersimpan', 'Pengaturan Rate Limiting (DDoS Protection) berhasil disimpan.');
+                firewallRules = newRules;
+            } else {
+                showModal('Gagal Menyimpan DDoS', result.message);
+            }
+        }
+
+
+        // --- Chart Initialization ---
+        function initCharts() {
+            const cpuCtx = document.getElementById('cpuChart').getContext('2d');
+            cpuChartInstance = new Chart(cpuCtx, {
+                type: 'line',
+                data: {
+                    labels: [], // Time labels
+                    datasets: [{
+                        label: 'Load CPU (%)',
+                        data: [],
+                        borderColor: '#ef4444',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true, max: 100 } }
+                }
+            });
+        }
+        
+        function updateCharts(cpuLoad) {
+            // CPU Chart Update (real-time history)
+            const now = new Date();
+            const timeLabel = now.toLocaleTimeString();
+
+            if (cpuChartInstance.data.labels.length >= 10) {
+                cpuChartInstance.data.labels.shift();
+                cpuChartInstance.data.datasets[0].data.shift();
+            }
+            cpuChartInstance.data.labels.push(timeLabel);
+            cpuChartInstance.data.datasets[0].data.push(cpuLoad);
+            cpuChartInstance.update();
+        }
+
+        // --- UI Rendering ---
+
+        function renderDomainList() {
+            const container = document.getElementById('domain-list');
+            const select = document.getElementById('target-domain');
+            container.innerHTML = '';
+            select.innerHTML = '';
+
+            domainData.forEach(domain => {
+                const statusColor = domain.status === 'Running' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+                
+                container.innerHTML += `
+                    <div class="flex justify-between items-center p-3 border border-gray-200 rounded-lg shadow-sm">
+                        <div>
+                            <p class="font-semibold text-gray-800">\${domain.name} <span class="text-xs font-medium px-2 py-0.5 rounded-full \${statusColor}">\${domain.status}</span></p>
+                            <p class="text-xs text-gray-500 font-mono">\${domain.path}</p>
+                        </div>
+                        <button onclick="simulateModal('Kelola Domain \${domain.name}')" class="text-indigo-500 hover:text-indigo-700 text-sm">Kelola</button>
+                    </div>
+                `;
+                
+                // Populate Select Dropdown
+                select.innerHTML += `<option value="\${domain.name}">\${domain.name}</option>`;
+            });
+        }
+
+        function renderDbList() {
+            const container = document.getElementById('db-list');
+            container.innerHTML = '';
+            
+            dbData.forEach(db => {
+                container.innerHTML += `
+                    <div class="flex justify-between items-center p-3 border border-gray-200 rounded-lg shadow-sm">
+                        <div>
+                            <p class="font-semibold text-gray-800">\${db.name}</p>
+                            <p class="text-xs text-gray-500">User: \${db.user} / Tipe: \${db.type} / Ukuran: \${db.size}</p>
+                        </div>
+                        <button onclick="simulateModal('Akses Database \${db.name}')" class="text-indigo-500 hover:text-indigo-700 text-sm">Akses</button>
+                    </div>
+                `;
+            });
+        }
+    </script>
+</body>
+</html>
+

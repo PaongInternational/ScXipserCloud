@@ -1,0 +1,25 @@
+{
+  "name": "termux-vps-paongdev",
+  "version": "1.0.0",
+  "description": "Dashboard manajemen VPS Termux dengan Node.js dan eksekusi perintah nyata.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [
+    "termux",
+    "vps",
+    "dashboard",
+    "node.js",
+    "hosting"
+  ],
+  "author": "PaongDev (bypaongpinew@gmail.com)",
+  "license": "MIT",
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1"
+  }
+}

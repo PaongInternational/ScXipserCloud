@@ -1,0 +1,22 @@
+{
+  "firewall": {
+    "status": "active",
+    "defaultPolicy": "DROP",
+    "allowedPorts": [
+      { "port": 80, "protocol": "tcp", "description": "HTTP (Nginx)" },
+      { "port": 443, "protocol": "tcp", "description": "HTTPS" },
+      { "port": 3000, "protocol": "tcp", "description": "Dashboard" },
+      { "port": 22, "protocol": "tcp", "description": "SSH (Termux:sshd)" }
+    ]
+  },
+  "ddosProtection": {
+    "status": "enabled",
+    "rateLimitPerIP": 100,
+    "burstLimit": 10,
+    "blockDurationMinutes": 5
+  },
+  "sshAccess": {
+    "rootLogin": false,
+    "allowedUsers": ["paongdev"]
+  }
+}
